@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://marticus88.github.io/homebrew-nookticus/sitemap.xml

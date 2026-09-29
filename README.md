@@ -1,6 +1,6 @@
 # homebrew-nookticus
 
-Homebrew tap for [Nookticus](https://nookticus.netlify.app/), a Dynamic Island clone for the Mac notch.
+Homebrew tap for [Nookticus](https://marticus88.github.io/nookticus/), a Dynamic Island clone for the Mac notch.
 
 ## Install
 
