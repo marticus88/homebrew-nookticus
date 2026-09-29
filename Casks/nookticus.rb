@@ -1,6 +1,6 @@
 cask "nookticus" do
-  version "0.1.1"
-  sha256 "d9fcfa08aa42d0de6895c74fc8f6a230b554cff42d334bce23eb70e6efc17055"
+  version "1.0.1"
+  sha256 "15f7e39a92fbdb92d1c456b5ea7e45ffeedadd98528576f9b64048589769a7bb"
 
   url "https://github.com/marticus88/homebrew-nookticus/releases/download/v#{version}/Nookticus.zip"
   name "Nookticus"
