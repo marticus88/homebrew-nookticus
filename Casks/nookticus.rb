@@ -5,7 +5,7 @@ cask "nookticus" do
   url "https://github.com/marticus88/homebrew-nookticus/releases/download/v#{version}/Nookticus-#{version}.zip"
   name "Nookticus"
   desc "Dynamic Island for the Mac notch"
-  homepage "https://nookticus.netlify.app/"
+  homepage "https://marticus88.github.io/homebrew-nookticus/"
 
   app "Nookticus.app"
 

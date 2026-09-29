@@ -663,6 +663,49 @@
     letter-spacing: 0.01em;
   }
 
+  /* Mini terminal: Homebrew install commands, front and center */
+  .mini-terminal {
+    max-width: 480px;
+    margin: 40px auto 0;
+    text-align: left;
+    background: rgba(6,8,12,0.75);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow:
+      0 30px 70px -30px rgba(0,0,0,0.8),
+      0 0 0 1px rgba(82,236,255,0.05),
+      0 0 40px -10px rgba(82,236,255,0.12);
+    animation: rise 0.7s ease 0.25s both;
+  }
+
+  .mini-terminal-chrome {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.04);
+    border-bottom: 1px solid var(--border);
+  }
+  .mini-terminal-chrome .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .mini-terminal-chrome .dot.red { background: #ff5f57; }
+  .mini-terminal-chrome .dot.yellow { background: #febc2e; }
+  .mini-terminal-chrome .dot.green { background: #28c840; }
+  .mini-terminal-title {
+    margin-left: 8px;
+    font-size: 11.5px;
+    color: var(--text-dimmer);
+  }
+
+  .mini-terminal-body {
+    padding: 16px 18px;
+    font-size: 13px;
+    line-height: 1.9;
+  }
+  .mt-line { color: var(--accent-green); white-space: pre; }
+  .mt-prompt { color: var(--accent-cyan); margin-right: 4px; }
+
   /* Features */
   section.features {
     padding: 88px 0 40px;
@@ -770,25 +813,6 @@
     padding: 30px 34px;
   }
 
-  .brew-commands {
-    margin: 16px 0 0;
-    background: #000;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px 18px;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.9;
-    color: var(--accent-green);
-    overflow-x: auto;
-  }
-
-  .install-box .brew-commands code {
-    background: none;
-    padding: 0;
-    color: inherit;
-  }
-
   .install-box h2 {
     font-size: 15px;
     font-weight: 650;
@@ -893,6 +917,17 @@
         </a>
         <span class="download-note" data-i18n="download_note">macOS 26+ · Apple Silicon</span>
       </div>
+
+      <div class="mini-terminal">
+        <div class="mini-terminal-chrome">
+          <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+          <span class="mini-terminal-title">zsh</span>
+        </div>
+        <div class="mini-terminal-body">
+          <div class="mt-line"><span class="mt-prompt">$</span> brew tap marticus88/nookticus</div>
+          <div class="mt-line"><span class="mt-prompt">$</span> brew install --cask nookticus<span class="cursor-blink">_</span></div>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -937,13 +972,6 @@
 
   <section class="install">
     <div class="wrap">
-      <div class="install-box brew-box">
-        <h2 data-i18n="brew_title">Installazione via Homebrew</h2>
-        <p data-i18n="brew_body">In alternativa allo zip, puoi installare e aggiornare Nookticus da terminale:</p>
-        <pre class="brew-commands"><code>brew tap marticus88/nookticus
-brew install --cask nookticus</code></pre>
-      </div>
-
       <div class="install-box">
         <h2 data-i18n="install_title">Informazioni sull'installazione</h2>
         <p data-i18n="install_body">Al primo avvio, macOS potrebbe impedirne l'apertura: si consiglia di selezionare <strong>Apri</strong> dal menu contestuale (tasto destro sull'icona dell'applicazione) anziché avviarla con un doppio click, oppure di accedere a <strong>Impostazioni di Sistema → Privacy e Sicurezza</strong> e confermare l'opzione <code>Apri comunque</code>.</p>
