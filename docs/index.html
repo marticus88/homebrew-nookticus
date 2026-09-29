@@ -1,0 +1,1086 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Nookticus — la Dynamic Island per il tuo Mac</title>
+<meta name="description" content="Nookticus porta la Dynamic Island di iOS sul notch del tuo Mac: Now Playing, batteria, Bluetooth, WiFi e dischi esterni, tutto in un unico posto. Gratis, per macOS 26+ su Apple Silicon.">
+<meta name="robots" content="index, follow">
+<meta name="author" content="Nookticus">
+<link rel="canonical" href="https://marticus88.github.io/homebrew-nookticus/">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Nookticus">
+<meta property="og:title" content="Nookticus — la Dynamic Island per il tuo Mac">
+<meta property="og:description" content="Now Playing, batteria, Bluetooth, WiFi e dischi esterni, tutto nel notch del tuo Mac. Gratis, per macOS 26+ su Apple Silicon.">
+<meta property="og:url" content="https://marticus88.github.io/homebrew-nookticus/">
+<meta property="og:image" content="https://marticus88.github.io/homebrew-nookticus/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="it_IT">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="es_ES">
+<meta property="og:locale:alternate" content="fr_FR">
+<meta property="og:locale:alternate" content="de_DE">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Nookticus — la Dynamic Island per il tuo Mac">
+<meta name="twitter:description" content="Now Playing, batteria, Bluetooth, WiFi e dischi esterni, tutto nel notch del tuo Mac.">
+<meta name="twitter:image" content="https://marticus88.github.io/homebrew-nookticus/og-image.png">
+
+<meta name="theme-color" content="#050609">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 60'%3E%3Crect x='10' y='5' width='80' height='36' rx='16' fill='%23000'/%3E%3Ccircle cx='50' cy='23' r='5' fill='%23222'/%3E%3C/svg%3E">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Nookticus",
+  "operatingSystem": "macOS 26+",
+  "applicationCategory": "UtilitiesApplication",
+  "description": "Nookticus porta la Dynamic Island di iOS sul notch del Mac: Now Playing, batteria, Bluetooth, WiFi e dischi esterni, tutto in un unico posto.",
+  "url": "https://marticus88.github.io/homebrew-nookticus/",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}
+</script>
+
+<style>
+  :root {
+    --bg: #050609;
+    --bg-elevated: rgba(255,255,255,0.045);
+    --bg-elevated-hover: rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.09);
+    --border-hover: rgba(255,255,255,0.18);
+    --text: #f5f6f8;
+    --text-dim: rgba(245,246,248,0.62);
+    --text-dimmer: rgba(245,246,248,0.38);
+    --accent-blue: #5ab0ff;
+    --accent-cyan: #52ecff;
+    --accent-orange: #ff9f4d;
+    --accent-red: #ff5c7a;
+    --accent-yellow: #ffd24d;
+    --accent-green: #4dffb0;
+    --accent-purple: #b98bff;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* CRT scanlines + phosphor flicker, because a Dynamic Island clone
+     deserves a terminal soul. */
+  .crt {
+    position: fixed;
+    inset: 0;
+    z-index: 6;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.03) 0px,
+      rgba(255,255,255,0.03) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    animation: crt-flicker 6s linear infinite;
+  }
+
+  @keyframes crt-flicker {
+    0%, 96%, 100% { opacity: 1; }
+    97% { opacity: 0.85; }
+    98% { opacity: 1; }
+    99% { opacity: 0.92; }
+  }
+
+  ::selection {
+    background: var(--accent-cyan);
+    color: #05070a;
+  }
+
+  .cursor-blink {
+    display: inline-block;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+
+  /* Ambient aurora background */
+  .aurora {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .aurora::before,
+  .aurora::after,
+  .aurora span {
+    content: "";
+    position: absolute;
+    width: 60vw;
+    height: 60vw;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.14;
+  }
+  .aurora::before {
+    top: -20vw;
+    left: -10vw;
+    background: radial-gradient(circle, var(--accent-blue), transparent 70%);
+    animation: drift1 22s ease-in-out infinite;
+  }
+  .aurora::after {
+    top: 10vw;
+    right: -20vw;
+    background: radial-gradient(circle, var(--accent-purple), transparent 70%);
+    animation: drift2 26s ease-in-out infinite;
+  }
+  .aurora span {
+    bottom: -25vw;
+    left: 20vw;
+    width: 50vw;
+    height: 50vw;
+    background: radial-gradient(circle, var(--accent-green), transparent 70%);
+    opacity: 0.16;
+    animation: drift3 30s ease-in-out infinite;
+  }
+
+  @keyframes drift1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(6vw, 8vw) scale(1.15); }
+  }
+  @keyframes drift2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-8vw, 6vw) scale(1.1); }
+  }
+  @keyframes drift3 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(4vw, -6vw) scale(1.08); }
+  }
+
+  .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Hero */
+  header.hero {
+    padding: 108px 0 40px;
+    text-align: center;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: var(--bg-elevated);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 7px 16px 7px 14px;
+    margin-bottom: 32px;
+    animation: rise 0.7s ease both;
+  }
+
+  .badge .pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    box-shadow: 0 0 8px var(--accent-green);
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* No entrance animation on this wrapper (or h1 itself): any animation
+     anywhere in this element's ancestor chain forces Chrome to composite
+     the background-clip:text gradient on its own layer, which leaves a
+     stray solid fragment painted near a corner of the box, outside the
+     actual glyphs. The title just appears immediately; everything below
+     it still animates in normally. */
+
+  h1 {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    font-size: clamp(44px, 8vw, 76px);
+    font-weight: 750;
+    letter-spacing: -0.03em;
+    margin: 0 0 18px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent-cyan) 55%, #9fb3d9 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  .tagline {
+    font-size: clamp(15px, 2vw, 17px);
+    color: var(--text-dim);
+    max-width: 540px;
+    margin: 0 auto 40px;
+    line-height: 1.6;
+    animation: rise 0.7s ease 0.1s both;
+  }
+
+  /* Notch mockup — animates between compact pill and an expanded
+     Now Playing panel, looping, to demonstrate the core interaction
+     rather than a static screenshot. */
+  .notch-stage {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 20px;
+    perspective: 1000px;
+    animation: rise 0.8s ease 0.15s both;
+  }
+
+  @property --angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+  }
+
+  .device-frame {
+    position: relative;
+    width: min(700px, 92vw);
+    background: linear-gradient(180deg, #2a2d35, #0c0d10);
+    border-radius: 24px;
+    padding: 3px;
+    box-shadow:
+      0 50px 120px -30px rgba(0,0,0,0.75),
+      0 0 0 1px rgba(255,255,255,0.06);
+  }
+
+  /* Slow rotating neon rim, a classic HUD device-frame trick */
+  .device-frame::before {
+    content: "";
+    position: absolute;
+    inset: -1.5px;
+    z-index: -1;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: conic-gradient(from var(--angle), transparent 0%, var(--accent-cyan) 12%, transparent 24%, transparent 74%, var(--accent-purple) 86%, transparent 98%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: rotate-angle 6s linear infinite;
+    opacity: 0.8;
+  }
+
+  @keyframes rotate-angle {
+    to { --angle: 360deg; }
+  }
+
+  .device-screen {
+    position: relative;
+    height: 250px;
+    border-radius: 21px;
+    overflow: hidden;
+    /* Flowing wallpaper in the product's own palette, with a faint vertical
+       ribbing for texture — the notch mockup needs to sit somewhere that
+       reads as "a real desktop", not a blank card. */
+    background:
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.08) 0px, rgba(0,0,0,0.08) 1px, transparent 1px, transparent 7px),
+      radial-gradient(120% 90% at 15% 0%, #6a8dff 0%, transparent 55%),
+      radial-gradient(110% 90% at 85% 100%, #33e0c9 0%, transparent 55%),
+      radial-gradient(140% 100% at 50% 50%, #7c5cff 0%, #141520 70%);
+  }
+
+  .device-screen::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%);
+    background-size: 250% 100%;
+    animation: scan-sweep 6s ease-in-out infinite;
+  }
+
+  @keyframes scan-sweep {
+    0%, 15% { background-position: 130% 0; }
+    50%, 100% { background-position: -30% 0; }
+  }
+
+  .menubar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 30px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.92);
+    background: rgba(10,10,14,0.35);
+    backdrop-filter: blur(6px);
+  }
+
+  .menubar .side { display: flex; align-items: center; gap: 14px; white-space: nowrap; }
+  .menubar .side.left .app-name { font-weight: 700; }
+  .menubar .side.left .menu-item { color: rgba(255,255,255,0.55); }
+  .menubar .side.left .menu-item:nth-child(n+4) { display: none; }
+  @media (min-width: 520px) {
+    .menubar .side.left .menu-item:nth-child(n+4) { display: inline; }
+  }
+  .menubar svg { width: 13px; height: 13px; display: block; }
+  .menubar .battery-pct { font-size: 11px; }
+
+  .notch-mock {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    background: #000;
+    border-radius: 0 0 18px 18px;
+    overflow: hidden;
+    box-shadow: 0 25px 70px -15px rgba(82,236,255,0.4);
+    animation: notch-cycle 14s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+
+  .notch-inner {
+    position: relative;
+    height: 100%;
+    width: 100%;
+  }
+
+  /* Compact face: equalizer bars, visible while collapsed */
+  .notch-compact {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 15px;
+    animation: face-compact 14s ease infinite;
+  }
+
+  .notch-compact .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+    flex-shrink: 0;
+  }
+
+  .notch-compact .bars {
+    display: flex;
+    gap: 3px;
+    align-items: flex-end;
+    height: 11px;
+  }
+  .notch-compact .bars span {
+    width: 3px;
+    background: var(--accent-cyan);
+    border-radius: 2px;
+    animation: eq 1.1s ease-in-out infinite;
+  }
+  .notch-compact .bars span:nth-child(1) { height: 40%; animation-delay: 0s; }
+  .notch-compact .bars span:nth-child(2) { height: 100%; animation-delay: 0.15s; }
+  .notch-compact .bars span:nth-child(3) { height: 65%; animation-delay: 0.3s; }
+  .notch-compact .bars span:nth-child(4) { height: 85%; animation-delay: 0.45s; }
+
+  @keyframes eq {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1); }
+  }
+
+  /* Expanded face: mini Now Playing dashboard */
+  .notch-expanded-music {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 26px;
+    opacity: 0;
+    animation: face-music 14s ease infinite;
+  }
+
+  .notch-expanded-music .artwork {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  }
+
+  .notch-expanded-music .meta { flex: 1; min-width: 0; }
+
+  .notch-expanded-music .title-line {
+    height: 9px;
+    width: 58%;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.85);
+    margin-bottom: 8px;
+  }
+
+  .notch-expanded-music .sub-line {
+    height: 7px;
+    width: 38%;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.35);
+    margin-bottom: 12px;
+  }
+
+  .notch-expanded-music .progress {
+    height: 4px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.14);
+    overflow: hidden;
+  }
+
+  .notch-expanded-music .progress::after {
+    content: "";
+    display: block;
+    height: 100%;
+    width: 35%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+  }
+
+  .notch-expanded-music .controls { display: flex; gap: 10px; flex-shrink: 0; }
+  .notch-expanded-music .controls span {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+  }
+  .notch-expanded-music .controls span:nth-child(2) {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+  }
+
+  /* Expanded face: mini Battery dashboard */
+  .notch-expanded-battery {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 0 30px;
+    opacity: 0;
+    animation: face-battery 14s ease infinite;
+  }
+
+  .battery-ring {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: conic-gradient(var(--accent-green) 0deg 295deg, rgba(255,255,255,0.12) 295deg 360deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .battery-ring::after {
+    content: "82%";
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #000;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .notch-expanded-battery .meta { flex: 1; min-width: 0; }
+  .notch-expanded-battery .title-line {
+    height: 9px;
+    width: 46%;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.85);
+    margin-bottom: 10px;
+  }
+  .notch-expanded-battery .badges { display: flex; gap: 6px; }
+  .notch-expanded-battery .badges span {
+    height: 16px;
+    width: 58px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  /* Cursor hint: nudges up to the notch right as it's about to expand,
+     to sell the hover interaction the whole app is built around. */
+  .cursor-hint {
+    position: absolute;
+    left: 50%;
+    top: 34px;
+    width: 14px;
+    height: 14px;
+    z-index: 4;
+    opacity: 0;
+    transform: translate(-50%, 0);
+    animation: cursor-cycle 14s ease infinite;
+  }
+  .cursor-hint svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5)); }
+
+  /* Container size cycle: compact -> Now Playing -> compact -> Battery -> compact */
+  @keyframes notch-cycle {
+    0%   { width: 160px; height: 30px; border-radius: 0 0 16px 16px; }
+    8%   { width: 160px; height: 30px; border-radius: 0 0 16px 16px; }
+    18%  { width: 78%;   height: 82px; border-radius: 0 0 24px 24px; }
+    42%  { width: 78%;   height: 82px; border-radius: 0 0 24px 24px; }
+    50%  { width: 160px; height: 30px; border-radius: 0 0 16px 16px; }
+    58%  { width: 160px; height: 30px; border-radius: 0 0 16px 16px; }
+    68%  { width: 56%;   height: 90px; border-radius: 0 0 24px 24px; }
+    92%  { width: 56%;   height: 90px; border-radius: 0 0 24px 24px; }
+    100% { width: 160px; height: 30px; border-radius: 0 0 16px 16px; }
+  }
+
+  @keyframes face-compact {
+    0%   { opacity: 1; }
+    8%   { opacity: 1; }
+    14%  { opacity: 0; }
+    46%  { opacity: 0; }
+    50%  { opacity: 1; }
+    58%  { opacity: 1; }
+    64%  { opacity: 0; }
+    96%  { opacity: 0; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes face-music {
+    0%   { opacity: 0; }
+    10%  { opacity: 0; }
+    20%  { opacity: 1; }
+    40%  { opacity: 1; }
+    48%  { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes face-battery {
+    0%   { opacity: 0; }
+    60%  { opacity: 0; }
+    70%  { opacity: 1; }
+    90%  { opacity: 1; }
+    98%  { opacity: 0; }
+    100% { opacity: 0; }
+  }
+
+  @keyframes cursor-cycle {
+    0%   { opacity: 0; top: 46px; }
+    7%   { opacity: 0; top: 46px; }
+    12%  { opacity: 1; top: 30px; }
+    16%  { opacity: 1; top: 24px; }
+    44%  { opacity: 1; top: 24px; }
+    48%  { opacity: 0; top: 40px; }
+    50%  { opacity: 0; top: 46px; }
+    57%  { opacity: 0; top: 46px; }
+    62%  { opacity: 1; top: 30px; }
+    66%  { opacity: 1; top: 24px; }
+    94%  { opacity: 1; top: 24px; }
+    98%  { opacity: 0; top: 40px; }
+    100% { opacity: 0; top: 46px; }
+  }
+
+  /* Download */
+  .download-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin: 56px 0 0;
+    animation: rise 0.7s ease 0.2s both;
+  }
+
+  .btn-download {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--text);
+    color: #08090c;
+    font-size: 16px;
+    font-weight: 650;
+    padding: 15px 30px;
+    border-radius: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    isolation: isolate;
+    transition: transform 0.2s ease;
+  }
+
+  .btn-download:hover { transform: translateY(-2px); }
+
+  .btn-download::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    z-index: -1;
+    border-radius: 16px;
+    background: linear-gradient(120deg, var(--accent-blue), var(--accent-purple), var(--accent-cyan));
+    opacity: 0.5;
+    filter: blur(10px);
+  }
+
+  .btn-download svg { width: 18px; height: 18px; }
+
+  .download-note {
+    font-size: 13px;
+    color: var(--text-dimmer);
+    letter-spacing: 0.01em;
+  }
+
+  /* Features */
+  section.features {
+    padding: 88px 0 40px;
+  }
+
+  .section-eyebrow {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-cyan);
+    opacity: 0.75;
+    margin: 0 0 12px;
+  }
+  .section-eyebrow::before,
+  .section-eyebrow::after { opacity: 0.5; }
+  .section-eyebrow::before { content: "// "; }
+
+  .section-title {
+    text-align: center;
+    font-size: clamp(26px, 4vw, 34px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 48px;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+  }
+
+  .feature-card {
+    position: relative;
+    background: var(--bg-elevated);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 26px;
+    transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-hover);
+    background: var(--bg-elevated-hover);
+    box-shadow: 0 0 0 1px rgba(82,236,255,0.25), 0 20px 40px -20px rgba(82,236,255,0.35);
+  }
+
+  .feature-card .icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+  }
+  .feature-card .icon svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .icon.blue { background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan)); }
+  .icon.orange { background: linear-gradient(135deg, var(--accent-orange), var(--accent-red)); }
+  .icon.yellow { background: linear-gradient(135deg, var(--accent-yellow), var(--accent-orange)); }
+  .icon.green { background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan)); }
+  .icon.purple { background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue)); }
+
+  .feature-card h3 {
+    font-size: 16.5px;
+    margin: 0 0 8px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+
+  .feature-card p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  /* Install note */
+  section.install {
+    padding: 24px 0 96px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  section.install .wrap {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .install-box {
+    background: var(--bg-elevated);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 30px 34px;
+  }
+
+  .brew-commands {
+    margin: 16px 0 0;
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--accent-green);
+    overflow-x: auto;
+  }
+
+  .install-box .brew-commands code {
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+
+  .install-box h2 {
+    font-size: 15px;
+    font-weight: 650;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .install-box p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  .install-box code {
+    background: rgba(255,255,255,0.09);
+    border-radius: 5px;
+    padding: 2px 7px;
+    font-size: 13px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--accent-cyan);
+  }
+
+  footer {
+    padding: 32px 0 56px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-dimmer);
+    position: relative;
+    z-index: 1;
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="aurora"><span></span></div>
+
+  <header class="hero">
+    <div class="wrap">
+      <span class="badge"><span class="pulse"></span>[ macOS · Apple Silicon ]</span>
+      <h1>Nookticus<span class="cursor-blink">_</span></h1>
+      <p class="tagline" data-i18n="tagline">La Dynamic Island che il tuo Mac non ha mai avuto. Now Playing, batteria, Bluetooth, WiFi e dischi esterni, tutto nel notch.</p>
+
+      <div class="notch-stage">
+        <div class="device-frame">
+          <div class="device-screen">
+            <div class="menubar">
+              <div class="side left">
+                <svg viewBox="0 0 14 17" fill="currentColor"><path d="M11.6 8.9c0-2.1 1.7-3.1 1.8-3.2-1-1.4-2.5-1.6-3-1.6-1.3-.1-2.5.8-3.1.8-.6 0-1.6-.7-2.7-.7-1.4 0-2.7.8-3.4 2-1.4 2.5-.4 6.3 1 8.3.7 1 1.5 2.1 2.6 2 1-.04 1.4-.7 2.7-.7 1.2 0 1.6.7 2.7.6 1.1 0 1.8-1 2.5-2 .6-.9.9-1.7 1.1-2.3-2.8-1.1-3.2-4-3.2-4.1zM9.3 2.8c.6-.7 1-1.7.9-2.7-.9.04-1.9.6-2.5 1.3-.5.6-1 1.6-.9 2.6 1 .1 1.9-.5 2.5-1.2z"/></svg>
+                <span class="app-name">Nookticus</span>
+                <span class="menu-item">File</span>
+                <span class="menu-item">Edit</span>
+                <span class="menu-item">View</span>
+              </div>
+              <div class="side right">
+                <svg viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1 4.5C4 1.8 6 1 8 1s4 .8 7 3.5M3.3 7C5 5.3 6.4 4.7 8 4.7S11 5.3 12.7 7M5.7 9.4C6.6 8.6 7.2 8.3 8 8.3s1.4.3 2.3 1.1"/><circle cx="8" cy="11" r="0.8" fill="currentColor" stroke="none"/></svg>
+                <span class="battery-pct">82%</span>
+                <svg viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1" y="1.5" width="19" height="9" rx="2.3"/><rect x="21.5" y="4" width="1.6" height="4" rx="0.8" fill="currentColor" stroke="none"/><rect x="2.7" y="3.2" width="14" height="5.6" rx="1.1" fill="currentColor" stroke="none"/></svg>
+                <span>18:29</span>
+              </div>
+            </div>
+
+            <div class="notch-mock">
+              <div class="notch-inner">
+                <div class="notch-compact">
+                  <div class="dot"></div>
+                  <div class="bars"><span></span><span></span><span></span><span></span></div>
+                </div>
+                <div class="notch-expanded-music">
+                  <div class="artwork"></div>
+                  <div class="meta">
+                    <div class="title-line"></div>
+                    <div class="sub-line"></div>
+                    <div class="progress"></div>
+                  </div>
+                  <div class="controls"><span></span><span></span><span></span></div>
+                </div>
+                <div class="notch-expanded-battery">
+                  <div class="battery-ring"></div>
+                  <div class="meta">
+                    <div class="title-line"></div>
+                    <div class="badges"><span></span><span></span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="cursor-hint">
+              <svg viewBox="0 0 24 24" fill="white"><path d="M4 2l16 8-7 2-2 7-7-17z"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="download-cta">
+        <a class="btn-download" href="https://github.com/marticus88/homebrew-nookticus/releases/download/v0.1.0/Nookticus-0.1.0.zip" download>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span data-i18n="download_btn">Scarica per macOS</span>
+        </a>
+        <span class="download-note" data-i18n="download_note">macOS 26+ · Apple Silicon</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="features">
+    <div class="wrap">
+      <p class="section-eyebrow" data-i18n="features_eyebrow">Cosa mostra</p>
+      <h2 class="section-title" data-i18n="features_title">Un notch, tante attività</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12h2M7 8v8M11 5v14M15 8v8M19 10v4M21 12h0"/></svg></div>
+          <h3 data-i18n="nowplaying_title">Now Playing</h3>
+          <p data-i18n="nowplaying_desc">Copertina, titolo, progresso e controlli per Spotify e Music, sempre a portata di sguardo.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon green"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="17" height="10" rx="2"/><line x1="22" y1="10" x2="22" y2="14"/><path d="M12.5 9 10 13h3l-2.5 4"/></svg></div>
+          <h3 data-i18n="battery_title">Batteria</h3>
+          <p data-i18n="battery_desc">Salute, temperatura, tempo rimanente e avviso Risparmio Energetico con un colpo d'occhio.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 8.5a16 16 0 0 1 20 0"/><path d="M5.5 12.5a11 11 0 0 1 13 0"/><path d="M9 16.5a5.5 5.5 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="white" stroke="none"/></svg></div>
+          <h3 data-i18n="wifi_title">WiFi</h3>
+          <p data-i18n="wifi_desc">Qualità del segnale, velocità di collegamento, banda e tipo di sicurezza della rete connessa.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/></svg></div>
+          <h3 data-i18n="bluetooth_title">Bluetooth</h3>
+          <p data-i18n="bluetooth_desc">Notifica su connessione e disconnessione di qualsiasi dispositivo, con categoria e tipo di trasporto.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon yellow"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg></div>
+          <h3 data-i18n="disk_title">Dischi esterni</h3>
+          <p data-i18n="disk_desc">Spazio utilizzato a colpo d'occhio, con avviso quando lo spazio libero scende sotto il 20%.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon green"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="14" height="10" rx="1"/><rect x="8" y="8" width="14" height="10" rx="1"/></svg></div>
+          <h3 data-i18n="multimonitor_title">Multi-monitor</h3>
+          <p data-i18n="multimonitor_desc">Scegli su quali schermi mostrare il notch — integrato sempre incluso, esterni a piacere.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="install">
+    <div class="wrap">
+      <div class="install-box brew-box">
+        <h2 data-i18n="brew_title">Installazione via Homebrew</h2>
+        <p data-i18n="brew_body">In alternativa allo zip, puoi installare e aggiornare Nookticus da terminale:</p>
+        <pre class="brew-commands"><code>brew tap marticus88/nookticus
+brew install --cask nookticus</code></pre>
+      </div>
+
+      <div class="install-box">
+        <h2 data-i18n="install_title">Informazioni sull'installazione</h2>
+        <p data-i18n="install_body">Al primo avvio, macOS potrebbe impedirne l'apertura: si consiglia di selezionare <strong>Apri</strong> dal menu contestuale (tasto destro sull'icona dell'applicazione) anziché avviarla con un doppio click, oppure di accedere a <strong>Impostazioni di Sistema → Privacy e Sicurezza</strong> e confermare l'opzione <code>Apri comunque</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Mirrors the app's own language logic: detect from the browser
+    // (equivalent to macOS system language), support it/en/es/fr/de,
+    // default to English for anything else.
+    const translations = {
+      it: {
+        tagline: "La Dynamic Island che il tuo Mac non ha mai avuto. Now Playing, batteria, Bluetooth, WiFi e dischi esterni, tutto nel notch.",
+        download_btn: "Scarica per macOS",
+        download_note: "macOS 26+ · Apple Silicon",
+        features_eyebrow: "Cosa mostra",
+        features_title: "Un notch, tante attività",
+        nowplaying_title: "Now Playing",
+        nowplaying_desc: "Copertina, titolo, progresso e controlli per Spotify e Music, sempre a portata di sguardo.",
+        battery_title: "Batteria",
+        battery_desc: "Salute, temperatura, tempo rimanente e avviso Risparmio Energetico con un colpo d'occhio.",
+        wifi_title: "WiFi",
+        wifi_desc: "Qualità del segnale, velocità di collegamento, banda e tipo di sicurezza della rete connessa.",
+        bluetooth_title: "Bluetooth",
+        bluetooth_desc: "Notifica su connessione e disconnessione di qualsiasi dispositivo, con categoria e tipo di trasporto.",
+        disk_title: "Dischi esterni",
+        disk_desc: "Spazio utilizzato a colpo d'occhio, con avviso quando lo spazio libero scende sotto il 20%.",
+        multimonitor_title: "Multi-monitor",
+        multimonitor_desc: "Scegli su quali schermi mostrare il notch — integrato sempre incluso, esterni a piacere.",
+        install_title: "Informazioni sull'installazione",
+        install_body: "Al primo avvio, macOS potrebbe impedirne l'apertura: si consiglia di selezionare <strong>Apri</strong> dal menu contestuale (tasto destro sull'icona dell'applicazione) anziché avviarla con un doppio click, oppure di accedere a <strong>Impostazioni di Sistema → Privacy e Sicurezza</strong> e confermare l'opzione <code>Apri comunque</code>.",
+      },
+      en: {
+        tagline: "The Dynamic Island your Mac never had. Now Playing, battery, Bluetooth, WiFi, and external drives, all in the notch.",
+        download_btn: "Download for macOS",
+        download_note: "macOS 26+ · Apple Silicon",
+        features_eyebrow: "What it shows",
+        features_title: "One notch, many activities",
+        nowplaying_title: "Now Playing",
+        nowplaying_desc: "Artwork, title, progress, and controls for Spotify and Music, always within reach.",
+        battery_title: "Battery",
+        battery_desc: "Health, temperature, time remaining, and a Low Power Mode badge at a glance.",
+        wifi_title: "WiFi",
+        wifi_desc: "Signal quality, link speed, band, and the security type of the connected network.",
+        bluetooth_title: "Bluetooth",
+        bluetooth_desc: "A toast on connect and disconnect for any device, with category and transport type.",
+        disk_title: "External drives",
+        disk_desc: "Used space at a glance, with a warning when free space drops below 20%.",
+        multimonitor_title: "Multi-monitor",
+        multimonitor_desc: "Choose which screens show the notch — the built-in display is always included, externals are optional.",
+        install_title: "Installation notice",
+        install_body: "On first launch, macOS may prevent it from opening: please select <strong>Open</strong> from the contextual menu (right-click the application icon) rather than double-clicking, or navigate to <strong>System Settings → Privacy &amp; Security</strong> and confirm the <code>Open Anyway</code> option.",
+      },
+      es: {
+        tagline: "La Dynamic Island que tu Mac nunca tuvo. Now Playing, batería, Bluetooth, WiFi y discos externos, todo en el notch.",
+        download_btn: "Descargar para macOS",
+        download_note: "macOS 26+ · Apple Silicon",
+        features_eyebrow: "Qué muestra",
+        features_title: "Un notch, muchas actividades",
+        nowplaying_title: "Reproduciendo",
+        nowplaying_desc: "Carátula, título, progreso y controles de Spotify y Music, siempre a la vista.",
+        battery_title: "Batería",
+        battery_desc: "Salud, temperatura, tiempo restante y aviso de Modo de Bajo Consumo de un vistazo.",
+        wifi_title: "WiFi",
+        wifi_desc: "Calidad de señal, velocidad de enlace, banda y tipo de seguridad de la red conectada.",
+        bluetooth_title: "Bluetooth",
+        bluetooth_desc: "Aviso al conectar y desconectar cualquier dispositivo, con categoría y tipo de transporte.",
+        disk_title: "Discos externos",
+        disk_desc: "Espacio usado de un vistazo, con aviso cuando el espacio libre baja del 20%.",
+        multimonitor_title: "Multi-monitor",
+        multimonitor_desc: "Elige en qué pantallas mostrar el notch — la pantalla integrada siempre incluida, las externas opcionales.",
+        install_title: "Aviso de instalación",
+        install_body: "En el primer inicio, macOS podría impedir su apertura: se recomienda seleccionar <strong>Abrir</strong> desde el menú contextual (clic derecho sobre el icono de la aplicación) en lugar de hacer doble clic, o bien acceder a <strong>Ajustes del Sistema → Privacidad y Seguridad</strong> y confirmar la opción <code>Abrir de todos modos</code>.",
+      },
+      fr: {
+        tagline: "La Dynamic Island que votre Mac n'a jamais eue. Now Playing, batterie, Bluetooth, WiFi et disques externes, tout dans le notch.",
+        download_btn: "Télécharger pour macOS",
+        download_note: "macOS 26+ · Apple Silicon",
+        features_eyebrow: "Ce qu'il affiche",
+        features_title: "Un notch, plusieurs activités",
+        nowplaying_title: "Lecture en cours",
+        nowplaying_desc: "Pochette, titre, progression et contrôles pour Spotify et Music, toujours à portée de vue.",
+        battery_title: "Batterie",
+        battery_desc: "Santé, température, temps restant et badge Mode Basse Consommation en un coup d'œil.",
+        wifi_title: "WiFi",
+        wifi_desc: "Qualité du signal, débit de liaison, bande et type de sécurité du réseau connecté.",
+        bluetooth_title: "Bluetooth",
+        bluetooth_desc: "Notification à la connexion et déconnexion de tout appareil, avec catégorie et type de transport.",
+        disk_title: "Disques externes",
+        disk_desc: "Espace utilisé en un coup d'œil, avec alerte quand l'espace libre passe sous 20 %.",
+        multimonitor_title: "Multi-écrans",
+        multimonitor_desc: "Choisissez sur quels écrans afficher le notch — l'écran intégré est toujours inclus, les externes en option.",
+        install_title: "Avis d'installation",
+        install_body: "Au premier lancement, macOS pourrait en empêcher l'ouverture : veuillez sélectionner <strong>Ouvrir</strong> depuis le menu contextuel (clic droit sur l'icône de l'application) plutôt qu'un double clic, ou vous rendre dans <strong>Réglages Système → Confidentialité et sécurité</strong> afin de confirmer l'option <code>Ouvrir quand même</code>.",
+      },
+      de: {
+        tagline: "Die Dynamic Island, die dein Mac nie hatte. Now Playing, Akku, Bluetooth, WLAN und externe Laufwerke, alles in der Notch.",
+        download_btn: "Für macOS herunterladen",
+        download_note: "macOS 26+ · Apple Silicon",
+        features_eyebrow: "Was sie zeigt",
+        features_title: "Eine Notch, viele Aktivitäten",
+        nowplaying_title: "Now Playing",
+        nowplaying_desc: "Cover, Titel, Fortschritt und Steuerung für Spotify und Music, immer im Blick.",
+        battery_title: "Akku",
+        battery_desc: "Zustand, Temperatur, verbleibende Zeit und Stromsparmodus-Hinweis auf einen Blick.",
+        wifi_title: "WLAN",
+        wifi_desc: "Signalqualität, Verbindungsgeschwindigkeit, Band und Sicherheitstyp des verbundenen Netzwerks.",
+        bluetooth_title: "Bluetooth",
+        bluetooth_desc: "Hinweis beim Verbinden und Trennen jedes Geräts, mit Kategorie und Übertragungstyp.",
+        disk_title: "Externe Laufwerke",
+        disk_desc: "Belegter Speicher auf einen Blick, mit Warnung, wenn der freie Speicher unter 20 % fällt.",
+        multimonitor_title: "Mehrere Bildschirme",
+        multimonitor_desc: "Wähle, auf welchen Bildschirmen die Notch erscheint — das interne Display ist immer dabei, externe optional.",
+        install_title: "Hinweis zur Installation",
+        install_body: "Beim ersten Start kann macOS das Öffnen verhindern: Bitte wählen Sie über das Kontextmenü (Rechtsklick auf das Anwendungssymbol) die Option <strong>Öffnen</strong> anstelle eines Doppelklicks, oder rufen Sie <strong>Systemeinstellungen → Datenschutz &amp; Sicherheit</strong> auf und bestätigen Sie die Option <code>Trotzdem öffnen</code>.",
+      },
+    };
+
+    const supported = Object.keys(translations);
+
+    function applyLang(lang) {
+      const dict = translations[lang] || translations.en;
+      document.documentElement.lang = lang;
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const key = el.getAttribute("data-i18n");
+        if (dict[key]) el.innerHTML = dict[key];
+      });
+    }
+
+    // Debug helper: run e.g. __setLang("en") in the browser console to
+    // preview any supported language without changing browser/OS settings.
+    window.__setLang = applyLang;
+
+    const browserLang = (navigator.language || "en").slice(0, 2).toLowerCase();
+    applyLang(supported.includes(browserLang) ? browserLang : "en");
+  </script>
+
+</body>
+</html>
